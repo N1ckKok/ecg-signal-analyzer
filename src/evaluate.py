@@ -3,25 +3,26 @@ from loadmitdb import loadmitdb
 from filtering import bandpass_filter
 from peak_detection import detect_peaks
 
-time, signal, fs, true_peaks = loadmitdb("100", 60)   
 
-filtered = bandpass_filter(signal, fs)
-found_peaks = detect_peaks(filtered, fs)
+def evaluate_record(record_name, seconds=60):
+    time, signal, fs, true_peaks = loadmitdb(record_name, seconds)
+    filtered = bandpass_filter(signal, fs)
+    found_peaks = detect_peaks(filtered, fs)
 
-tolerance = int(0.1 * fs)     
+    tolerance = int(0.1 * fs)
+    tp = 0
+    for beat in true_peaks:
+        if np.any(np.abs(found_peaks - beat) <= tolerance):
+            tp += 1
+    fn = len(true_peaks) - tp
+    fp = len(found_peaks) - tp
+    sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    return len(true_peaks), len(found_peaks), sensitivity, precision
 
 
-tp = 0
-for beat in true_peaks:
-    if np.any(np.abs(found_peaks - beat) <= tolerance):
-        tp += 1
+records = ["100", "101", "105", "108", "203", "207"]
 
-fn = len(true_peaks) - tp
-fp = len(found_peaks) - tp
-sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
-precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-
-print("true beats:", len(true_peaks))
-print("found:", len(found_peaks))
-print("sensitivity:", round(sensitivity * 100, 1), "%")
-print("precision:", round(precision * 100, 1), "%")
+for name in records:
+    n_true, n_found, sens, prec = evaluate_record(name)
+    print(f"{name}: true={n_true} found={n_found} sens={sens*100:.1f}% prec={prec*100:.1f}%")
