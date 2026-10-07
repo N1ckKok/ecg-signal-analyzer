@@ -1,1 +1,0 @@
-you need python instal and then in terminal (pip install -r)
